@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  clerkUserId       String             @unique
+  name              String?
+  email             String             @unique
+  imageUrl          String?
+  role              Role               @default(USER)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  lastActivityAt    DateTime?
+  createdGroups     DiscussionGroup[]  @relation("GroupCreator")
+  groupMemberships  DiscussionMember[]
+  posts             DiscussionPost[]
+  replies           DiscussionReply[]
+  emergencyContacts EmergencyContact[]
+  emergencyEvents   EmergencyEvent[]
+  incidents         Incident[]
+  journeys          Journey[]
+  reportsFiled      Report[]           @relation("ReportedBy")
+  routes            Route[]
+  safetyAlerts      SafetyAlert[]
+
+  @@index([role])
+}
+
+model EmergencyContact {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  phone           String
+  email           String?
+  relationship    String?
+  createdAt       DateTime @default(now())
+  whatsappEnabled Boolean  @default(false)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Incident {
+  id               String          @id @default(cuid())
+  userId           String?
+  type             IncidentType
+  description      String
+  latitude         Float
+  longitude        Float
+  severity         Severity        @default(MEDIUM)
+  status           IncidentStatus  @default(PENDING)
+  isAnonymous      Boolean         @default(false)
+  confidenceWeight Float           @default(0.3)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  user             User?           @relation(fields: [userId], references: [id])
+  media            IncidentMedia[]
+
+  @@index([latitude, longitude])
+  @@index([status])
+  @@index([type])
+}
+
+model IncidentMedia {
+  id         String   @id @default(cuid())
+  incidentId String
+  url        String
+  type       String
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+}
+
+model RiskPrediction {
+  id           String   @id @default(cuid())
+  latitude     Float
+  longitude    Float
+  riskScore    Float
+  riskCategory String
+  confidence   Float    @default(0.5)
+  modelVersion String   @default("v1")
+  timestamp    DateTime @default(now())
+
+  @@index([latitude, longitude])
+}
+
+model Route {
+  id             String         @id @default(cuid())
+  userId         String?
+  originLat      Float
+  originLon      Float
+  destLat        Float
+  destLon        Float
+  originLabel    String?
+  destLabel      String?
+  distanceKm     Float
+  durationMin    Int?
+  riskScore      Int
+  routeType      RouteType
+  geometry       Json
+  roadNames      Json?
+  riskFactors    Json?
+  createdAt      DateTime       @default(now())
+  avgSafetyScore Float?
+  segmentData    Json?
+  journeys       Journey[]
+  user           User?          @relation(fields: [userId], references: [id])
+  segments       RouteSegment[]
+
+  @@index([userId])
+}
+
+model RouteSegment {
+  id           String @id @default(cuid())
+  routeId      String
+  sequence     Int
+  geometry     Json
+  riskScore    Float
+  riskCategory String
+  riskFactors  Json?
+  route        Route  @relation(fields: [routeId], references: [id], onDelete: Cascade)
+}
+
+model Journey {
+  id               String           @id @default(cuid())
+  userId           String
+  routeId          String?
+  status           JourneyStatus    @default(PLANNED)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  currentLatitude  Float?
+  currentLongitude Float?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  emergencyEvents  EmergencyEvent[]
+  route            Route?           @relation(fields: [routeId], references: [id])
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alerts           SafetyAlert[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model SafetyAlert {
+  id        String        @id @default(cuid())
+  userId    String
+  journeyId String?
+  type      AlertType
+  message   String
+  severity  AlertSeverity @default(INFO)
+  createdAt DateTime      @default(now())
+  journey   Journey?      @relation(fields: [journeyId], references: [id])
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmergencyEvent {
+  id                  String    @id @default(cuid())
+  userId              String
+  journeyId           String?
+  latitude            Float
+  longitude           Float
+  message             String?
+  isSilent            Boolean   @default(false)
+  status              String    @default("TRIGGERED")
+  notificationResults Json?
+  createdAt           DateTime  @default(now())
+  resolvedAt          DateTime?
+  journey             Journey?  @relation(fields: [journeyId], references: [id])
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DiscussionGroup {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  description String?
+  createdBy   String
+  createdAt   DateTime           @default(now())
+  creator     User               @relation("GroupCreator", fields: [createdBy], references: [id])
+  members     DiscussionMember[]
+  posts       DiscussionPost[]
+}
+
+model DiscussionMember {
+  id       String          @id @default(cuid())
+  groupId  String
+  userId   String
+  joinedAt DateTime        @default(now())
+  group    DiscussionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model DiscussionPost {
+  id            String            @id @default(cuid())
+  groupId       String
+  userId        String
+  content       String
+  latitude      Float?
+  longitude     Float?
+  locationLabel String?
+  category      String?
+  isFlagged     Boolean           @default(false)
+  upvoteCount   Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  group         DiscussionGroup   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies       DiscussionReply[]
+  reports       Report[]
+
+  @@index([groupId])
+}
+
+model DiscussionReply {
+  id        String         @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  post      DiscussionPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model Report {
+  id         String          @id @default(cuid())
+  postId     String?
+  reportedBy String
+  reason     String
+  status     ReportStatus    @default(PENDING)
+  createdAt  DateTime        @default(now())
+  post       DiscussionPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter   User            @relation("ReportedBy", fields: [reportedBy], references: [id])
+
+  @@index([status])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum IncidentType {
+  HARASSMENT
+  THEFT
+  ASSAULT
+  SUSPICIOUS_ACTIVITY
+  ACCIDENT
+  POOR_LIGHTING
+  UNSAFE_AREA
+  OTHER
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  RESOLVED
+}
+
+enum RouteType {
+  SAFEST
+  FASTEST
+  BALANCED
+}
+
+enum JourneyStatus {
+  PLANNED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+  SOS_TRIGGERED
+}
+
+enum AlertType {
+  RISK_INCREASE
+  OFF_ROUTE
+  SOS_TRIGGERED
+  CHECKIN_MISSED
+  GENERAL
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  ACTIONED
+}

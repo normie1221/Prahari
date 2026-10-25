@@ -1,0 +1,91 @@
+/*
+  PRAHARI Design Tokens
+  =====================
+  Grounding concept: a city street at dusk — sodium-streetlight amber
+  against a deep indigo sky. The palette and the "safety ribbon" signature
+  component both come directly from that image, not a generic dark-mode
+  default.
+
+  Type: Fraunces (display, editorial warmth — used sparingly for headlines)
+        Inter (UI/body — legible at small dashboard sizes)
+        IBM Plex Mono (data/coordinates/timestamps — civic-infrastructure feel)
+*/
+:root {
+  /* -- Palette -- */
+  --ink-night: #0E1226;       /* base background */
+  --ink-surface: #171B38;     /* card/panel surface */
+  --ink-surface-raised: #202650;
+  --ink-line: #2C3260;        /* borders/dividers */
+
+  --paper: #F4F1EA;           /* warm off-white for primary text on dark */
+  --paper-muted: #B7BAD6;     /* secondary text on dark */
+  --paper-faint: #7E82AC;     /* tertiary text on dark */
+
+  --amber-streetlamp: #F2B747; /* signature accent — moderate risk / highlight */
+  --amber-streetlamp-dim: #8A6A2A;
+  --green-banyan: #45B892;     /* safe / lower risk */
+  --coral-signal: #EF6156;     /* higher risk / alerts */
+
+  --focus-ring: #7FD8FF;
+
+  /* -- Type -- */
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* -- Scale -- */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.4);
+
+  --sidebar-width: 232px;
+  --topbar-height: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink-night);
+  color: var(--paper);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+button, input, textarea, select { font-family: inherit; }
+
+::selection { background: var(--amber-streetlamp); color: var(--ink-night); }
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Reduced motion respected globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ink-line); border-radius: 8px; }

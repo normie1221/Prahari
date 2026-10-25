@@ -1,0 +1,34 @@
+name: Navigation Service CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["navigation-service/**", ".github/workflows/navigation-service-ci.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["navigation-service/**", ".github/workflows/navigation-service-ci.yml"]
+
+defaults:
+  run:
+    working-directory: navigation-service
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system geo dependencies (osmnx/geopandas)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gdal-bin libgdal-dev libgeos-dev libproj-dev
+
+      - name: Install Python dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest tests/ -v

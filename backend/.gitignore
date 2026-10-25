@@ -1,0 +1,5 @@
+node_modules/
+.env
+uploads/incidents/*
+!uploads/incidents/.gitkeep
+dist/

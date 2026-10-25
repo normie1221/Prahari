@@ -1,0 +1,67 @@
+
+# PRAHARI — local development stack.
+#
+# This gives you a local PostgreSQL for schema/dev work WITHOUT needing Neon
+# yet. When you're ready for production (or want to develop against the real
+# thing), point DATABASE_URL/DIRECT_URL at your Neon connection strings
+# instead and you can drop the `postgres` service entirely.
+#
+# The React frontend is NOT included here — run it with `npm run dev` in
+# frontend/ so you get Vite's fast refresh. See SETUP.md.
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: prahari
+      POSTGRES_PASSWORD: prahari_dev_password
+      POSTGRES_DB: prahari
+    ports:
+      - "5432:5432"
+    volumes:
+      - prahari_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prahari"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  navigation-service:
+    build: ./navigation-service
+    ports:
+      - "8000:8000"
+    environment:
+      PRAHARI_INTERNAL_TOKEN: dev-internal-token-change-me
+      PRAHARI_CORS_ORIGINS: http://localhost:4000
+      PRAHARI_WARM_AREAS: "bengaluru_core:12.9634:77.5975:6000"
+      PRAHARI_DATA_DIR: /app/data/areas
+    volumes:
+      - prahari_nav_data:/app/data/areas
+
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      navigation-service:
+        condition: service_started
+    environment:
+      PORT: 4000
+      NODE_ENV: development
+      FRONTEND_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgresql://prahari:prahari_dev_password@postgres:5432/prahari?schema=public
+      DIRECT_URL: postgresql://prahari:prahari_dev_password@postgres:5432/prahari?schema=public
+      NAVIGATION_SERVICE_URL: http://navigation-service:8000
+      NAVIGATION_SERVICE_TOKEN: dev-internal-token-change-me
+      AUTH_DEV_BYPASS: "true"
+      CLERK_SECRET_KEY: ""
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+volumes:
+  prahari_pg_data:
+  prahari_nav_data:
